@@ -7,6 +7,7 @@ import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { ProfileModule } from './profile/profile.module';
 import { ExperiencesModule } from './experiences/experiences.module';
+import { EducationModule } from './education/education.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { ExperiencesModule } from './experiences/experiences.module';
     AuthModule,
     ProfileModule,
     ExperiencesModule,
+    EducationModule,
   ],
   controllers: [AppController],
   providers: [AppService],
