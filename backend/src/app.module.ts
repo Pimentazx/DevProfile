@@ -8,6 +8,7 @@ import { AuthModule } from './auth/auth.module';
 import { ProfileModule } from './profile/profile.module';
 import { ExperiencesModule } from './experiences/experiences.module';
 import { EducationModule } from './education/education.module';
+import { SkillsModule } from './skills/skills.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { EducationModule } from './education/education.module';
     ProfileModule,
     ExperiencesModule,
     EducationModule,
+    SkillsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
