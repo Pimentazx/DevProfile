@@ -9,6 +9,7 @@ import { ProfileModule } from './profile/profile.module';
 import { ExperiencesModule } from './experiences/experiences.module';
 import { EducationModule } from './education/education.module';
 import { SkillsModule } from './skills/skills.module';
+import { CertificatesModule } from './certificates/certificates.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { SkillsModule } from './skills/skills.module';
     ExperiencesModule,
     EducationModule,
     SkillsModule,
+    CertificatesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
