@@ -12,6 +12,8 @@ import { SkillsModule } from './skills/skills.module';
 import { CertificatesModule } from './certificates/certificates.module';
 import { ProjectsModule } from './projects/projects.module';
 import { SocialLinksModule } from './social-links/social-links.module';
+import { IntegrationsModule } from './integrations/integrations.module';
+import { SyncModule } from './sync/sync.module';
 
 @Module({
   imports: [
@@ -28,6 +30,8 @@ import { SocialLinksModule } from './social-links/social-links.module';
     CertificatesModule,
     ProjectsModule,
     SocialLinksModule,
+    IntegrationsModule,
+    SyncModule,
   ],
   controllers: [AppController],
   providers: [AppService],
