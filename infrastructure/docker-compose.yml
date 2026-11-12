@@ -21,5 +21,24 @@ services:
       timeout: 5s
       retries: 10
 
+  postgres-test:
+    image: postgres:17-alpine
+    container_name: devprofile-postgres-test
+    profiles: ["test"]
+    environment:
+      POSTGRES_DB: devprofile_test
+      POSTGRES_USER: devprofile
+      POSTGRES_PASSWORD: devprofile_test
+    ports:
+      - "5435:5432"
+    volumes:
+      - devprofile_postgres_test_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U devprofile -d devprofile_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
 volumes:
   devprofile_postgres_data:
+  devprofile_postgres_test_data:

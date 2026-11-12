@@ -1,18 +1,51 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { NotFoundException } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { createMockFunction } from '../test-utils/mock-function';
 import { SocialLinksService } from './social-links.service';
 
 describe('SocialLinksService', () => {
-  let service: SocialLinksService;
+  it('creates a social link associated with the owner profile', async () => {
+    const findUnique = createMockFunction(async (_args: unknown) => ({ id: 'profile-1' }));
+    const created = { id: 'link-1', platform: 'GITHUB' };
+    const create = createMockFunction(async (_args: unknown) => created);
+    const prisma = {
+      profile: { findUnique: findUnique.fn },
+      socialLink: { create: create.fn },
+    } as unknown as PrismaService;
+    const service = new SocialLinksService(prisma);
 
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [SocialLinksService],
-    }).compile();
-
-    service = module.get<SocialLinksService>(SocialLinksService);
+    await expect(
+      service.create('user-1', {
+        platform: 'GITHUB',
+        url: 'https://github.com/example',
+      }),
+    ).resolves.toBe(created);
+    expect(create.calls[0][0]).toEqual({
+      data: {
+        profileId: 'profile-1',
+        platform: 'GITHUB',
+        url: 'https://github.com/example',
+        username: undefined,
+        order: 0,
+      },
+    });
   });
 
-  it('should be defined', () => {
-    expect(service).toBeDefined();
+  it('returns not found when the profile does not exist', async () => {
+    const findUnique = createMockFunction(async (_args: unknown) => null);
+    const create = createMockFunction(async (_args: unknown) => ({}));
+    const prisma = {
+      profile: { findUnique: findUnique.fn },
+      socialLink: { create: create.fn },
+    } as unknown as PrismaService;
+    const service = new SocialLinksService(prisma);
+
+    await expect(
+      service.create('missing-user', {
+        platform: 'GITHUB',
+        url: 'https://github.com/example',
+      }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(create.calls).toHaveLength(0);
   });
 });

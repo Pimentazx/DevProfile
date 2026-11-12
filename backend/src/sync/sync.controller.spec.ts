@@ -1,18 +1,21 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { SyncService } from './sync.service';
 import { SyncController } from './sync.controller';
 
 describe('SyncController', () => {
-  let controller: SyncController;
+  it('passes the authenticated user ID to the service', async () => {
+    const expected = [{ id: 'resource-1' }];
+    let receivedUserId = '';
+    const service = {
+      findAll: async (userId: string) => {
+        receivedUserId = userId;
+        return expected;
+      },
+    };
+    const controller = new SyncController(service as unknown as SyncService);
 
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      controllers: [SyncController],
-    }).compile();
-
-    controller = module.get<SyncController>(SyncController);
-  });
-
-  it('should be defined', () => {
-    expect(controller).toBeDefined();
+    await expect(
+      controller.findAll({ user: { userId: 'user-123', email: 'user@example.test' } } as never),
+    ).resolves.toBe(expected);
+    expect(receivedUserId).toBe('user-123');
   });
 });

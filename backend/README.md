@@ -57,6 +57,23 @@ $ pnpm run test:e2e
 $ pnpm run test:cov
 ```
 
+## Testes de integração (PostgreSQL)
+
+Os testes e2e usam um banco PostgreSQL isolado chamado `devprofile_test`, exposto na porta `5435`. A URL é validada antes de aplicar migrations; o comando recusa outros nomes de banco e hosts remotos.
+
+```bash
+# na pasta infrastructure, iniciar o PostgreSQL de testes
+docker compose --profile test up -d postgres-test
+
+# na pasta backend, criar a configuração local ignorada pelo Git
+cp .env.test.example .env.test
+
+# aplica migrations e executa os testes e2e
+pnpm run test:e2e
+```
+
+O primeiro passo pode ser feito junto com o PostgreSQL de desenvolvimento; cada serviço usa sua própria porta, banco e volume. Os testes removem os registros criados por cada caso.
+
 ## Deployment
 
 When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.

@@ -1,18 +1,21 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { ProjectsService } from './projects.service';
 import { ProjectsController } from './projects.controller';
 
 describe('ProjectsController', () => {
-  let controller: ProjectsController;
+  it('passes the authenticated user ID to the service', async () => {
+    const expected = [{ id: 'resource-1' }];
+    let receivedUserId = '';
+    const service = {
+      findAll: async (userId: string) => {
+        receivedUserId = userId;
+        return expected;
+      },
+    };
+    const controller = new ProjectsController(service as unknown as ProjectsService);
 
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      controllers: [ProjectsController],
-    }).compile();
-
-    controller = module.get<ProjectsController>(ProjectsController);
-  });
-
-  it('should be defined', () => {
-    expect(controller).toBeDefined();
+    await expect(
+      controller.findAll({ user: { userId: 'user-123', email: 'user@example.test' } } as never),
+    ).resolves.toBe(expected);
+    expect(receivedUserId).toBe('user-123');
   });
 });

@@ -1,18 +1,12 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 
 describe('AuthController', () => {
-  let controller: AuthController;
+  it('forwards the registration payload to AuthService', async () => {
+    const dto = { email: 'user@example.test', fullName: 'User', password: 'Password123' };
+    const service = { register: async (input: unknown) => input };
+    const controller = new AuthController(service as unknown as AuthService);
 
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      controllers: [AuthController],
-    }).compile();
-
-    controller = module.get<AuthController>(AuthController);
-  });
-
-  it('should be defined', () => {
-    expect(controller).toBeDefined();
+    await expect(controller.register(dto)).resolves.toBe(dto);
   });
 });

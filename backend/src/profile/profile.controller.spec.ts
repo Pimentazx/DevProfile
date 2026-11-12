@@ -1,18 +1,21 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { ProfileService } from './profile.service';
 import { ProfileController } from './profile.controller';
 
 describe('ProfileController', () => {
-  let controller: ProfileController;
+  it('passes the authenticated user ID to the service', async () => {
+    const expected = [{ id: 'resource-1' }];
+    let receivedUserId = '';
+    const service = {
+      findMyProfile: async (userId: string) => {
+        receivedUserId = userId;
+        return expected;
+      },
+    };
+    const controller = new ProfileController(service as unknown as ProfileService);
 
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      controllers: [ProfileController],
-    }).compile();
-
-    controller = module.get<ProfileController>(ProfileController);
-  });
-
-  it('should be defined', () => {
-    expect(controller).toBeDefined();
+    await expect(
+      controller.findMyProfile({ user: { userId: 'user-123', email: 'user@example.test' } } as never),
+    ).resolves.toBe(expected);
+    expect(receivedUserId).toBe('user-123');
   });
 });
