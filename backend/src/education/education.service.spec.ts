@@ -1,7 +1,7 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { DegreeType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { createMockFunction } from '../test-utils/mock-function';
+import { createMockFunction } from '../../test/mock-function';
 import { EducationService } from './education.service';
 
 describe('EducationService', () => {

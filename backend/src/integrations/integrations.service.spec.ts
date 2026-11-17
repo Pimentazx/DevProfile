@@ -1,5 +1,5 @@
 import { PrismaService } from '../prisma/prisma.service';
-import { createMockFunction } from '../test-utils/mock-function';
+import { createMockFunction } from '../../test/mock-function';
 import { IntegrationsService } from './integrations.service';
 
 describe('IntegrationsService', () => {

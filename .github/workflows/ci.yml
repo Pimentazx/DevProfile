@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backend-tests:
+    name: Backend tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: devprofile_test
+          POSTGRES_USER: devprofile
+          POSTGRES_PASSWORD: devprofile_test
+        ports:
+          - 5435:5432
+        options: >-
+          --health-cmd "pg_isready -U devprofile -d devprofile_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.13.1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: backend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: pnpm exec prisma generate --config ./test/prisma-e2e.config.ts
+        env:
+          DATABASE_URL: postgresql://devprofile:devprofile_test@localhost:5435/devprofile_test?schema=public
+
+      - name: Run unit tests
+        run: pnpm run test -- --runInBand
+
+      - name: Run integration tests
+        run: pnpm run test:e2e
+        env:
+          TEST_DATABASE_URL: postgresql://devprofile:devprofile_test@localhost:5435/devprofile_test?schema=public
+          JWT_SECRET: local-e2e-only-secret
+
+      - name: Build backend
+        run: pnpm run build

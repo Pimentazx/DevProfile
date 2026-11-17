@@ -1,6 +1,6 @@
 import { UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { createMockFunction } from '../test-utils/mock-function';
+import { createMockFunction } from '../../test/mock-function';
 import { UsersService } from '../users/users.service';
 import { AuthService } from './auth.service';
 

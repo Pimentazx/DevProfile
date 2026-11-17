@@ -74,6 +74,10 @@ pnpm run test:e2e
 
 O primeiro passo pode ser feito junto com o PostgreSQL de desenvolvimento; cada serviço usa sua própria porta, banco e volume. Os testes removem os registros criados por cada caso.
 
+## CI
+
+O GitHub Actions executa os testes unitários, gera o Prisma Client, sobe um PostgreSQL efêmero para os testes e2e e compila o backend em cada push, pull request ou execução manual.
+
 ## Deployment
 
 When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.

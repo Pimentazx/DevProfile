@@ -6,22 +6,30 @@ const envPath = path.resolve(__dirname, '..', '.env.test');
 let envFile;
 try {
   envFile = readFileSync(envPath, 'utf8');
-} catch {
-  console.error('Crie backend/.env.test usando backend/.env.test.example.');
-  process.exit(1);
+} catch (error) {
+  if (error.code !== 'ENOENT' || !process.env.TEST_DATABASE_URL) {
+    console.error(
+      'Defina TEST_DATABASE_URL ou crie backend/.env.test usando o exemplo.',
+    );
+    process.exit(1);
+  }
 }
 
-for (const line of envFile.split(/\r?\n/)) {
+for (const line of (envFile ?? '').split(/\r?\n/)) {
   const match = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$/);
   if (!match) continue;
 
   const value = match[2].replace(/^(['"])(.*)\1$/, '$2');
-  process.env[match[1]] = value;
+  if (process.env[match[1]] === undefined) {
+    process.env[match[1]] = value;
+  }
 }
 
 const testDatabaseUrl = process.env.TEST_DATABASE_URL;
 if (!testDatabaseUrl) {
-  console.error('TEST_DATABASE_URL precisa estar definida em backend/.env.test.');
+  console.error(
+    'TEST_DATABASE_URL precisa estar definida em backend/.env.test.',
+  );
   process.exit(1);
 }
 
@@ -39,7 +47,10 @@ if (
 process.env.DATABASE_URL = testDatabaseUrl;
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'local-e2e-only-secret';
 
-const prismaCli = path.resolve(__dirname, '../node_modules/prisma/build/index.js');
+const prismaCli = path.resolve(
+  __dirname,
+  '../node_modules/prisma/build/index.js',
+);
 const migration = spawnSync(
   process.execPath,
   [prismaCli, 'migrate', 'deploy', '--config', './test/prisma-e2e.config.ts'],

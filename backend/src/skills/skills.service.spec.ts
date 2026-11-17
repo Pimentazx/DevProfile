@@ -1,6 +1,6 @@
 import { ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { createMockFunction } from '../test-utils/mock-function';
+import { createMockFunction } from '../../test/mock-function';
 import { SkillsService } from './skills.service';
 
 describe('SkillsService', () => {
