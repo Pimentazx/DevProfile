@@ -56,7 +56,7 @@ jobs:
           DATABASE_URL: postgresql://devprofile:devprofile_test@localhost:5435/devprofile_test?schema=public
 
       - name: Run unit tests
-        run: pnpm run test -- --runInBand
+        run: pnpm run test:ci
 
       - name: Run integration tests
         run: pnpm run test:e2e
