@@ -27,12 +27,33 @@ describe('SyncService', () => {
 
   it('does not return sync records belonging to another user', async () => {
     const findFirst = createMockFunction(async (_args: unknown) => null);
-    const prisma = { sync: { findFirst: findFirst.fn } } as unknown as PrismaService;
+    const prisma = {
+      sync: { findFirst: findFirst.fn },
+    } as unknown as PrismaService;
     const service = new SyncService(prisma);
 
-    await expect(service.findOne('user-2', 'sync-1')).rejects.toBeInstanceOf(NotFoundException);
+    await expect(service.findOne('user-2', 'sync-1')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
     expect(findFirst.calls[0][0]).toEqual({
       where: { id: 'sync-1', userId: 'user-2' },
     });
+  });
+
+  it('does not update a sync owned by another user', async () => {
+    const findFirst = createMockFunction(async (_args: unknown) => null);
+    const update = createMockFunction(async (_args: unknown) => ({}));
+    const prisma = {
+      sync: { findFirst: findFirst.fn, update: update.fn },
+    } as unknown as PrismaService;
+    const service = new SyncService(prisma);
+
+    await expect(
+      service.update('user-2', 'sync-1', { status: 'SUCCESS' }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(findFirst.calls[0][0]).toEqual({
+      where: { id: 'sync-1', userId: 'user-2' },
+    });
+    expect(update.calls).toHaveLength(0);
   });
 });

@@ -5,7 +5,9 @@ import { CertificatesService } from './certificates.service';
 
 describe('CertificatesService', () => {
   it('creates a certificate for the user profile and converts date fields', async () => {
-    const findUnique = createMockFunction(async (_args: unknown) => ({ id: 'profile-1' }));
+    const findUnique = createMockFunction(async (_args: unknown) => ({
+      id: 'profile-1',
+    }));
     const created = { id: 'certificate-1' };
     const create = createMockFunction(async (_args: unknown) => created);
     const prisma = {
@@ -48,5 +50,26 @@ describe('CertificatesService', () => {
       }),
     ).rejects.toBeInstanceOf(NotFoundException);
     expect(create.calls).toHaveLength(0);
+  });
+
+  it('does not update a certificate that is not owned by the user', async () => {
+    const findProfile = createMockFunction(async (_args: unknown) => ({
+      id: 'profile-1',
+    }));
+    const findFirst = createMockFunction(async (_args: unknown) => null);
+    const update = createMockFunction(async (_args: unknown) => ({}));
+    const prisma = {
+      profile: { findUnique: findProfile.fn },
+      certificate: { findFirst: findFirst.fn, update: update.fn },
+    } as unknown as PrismaService;
+    const service = new CertificatesService(prisma);
+
+    await expect(
+      service.update('user-1', 'foreign-certificate', { name: 'Changed' }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(findFirst.calls[0][0]).toMatchObject({
+      where: { id: 'foreign-certificate', profileId: 'profile-1' },
+    });
+    expect(update.calls).toHaveLength(0);
   });
 });

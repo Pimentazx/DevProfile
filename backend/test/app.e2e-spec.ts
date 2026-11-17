@@ -318,6 +318,16 @@ describe('DevProfile API (e2e)', () => {
         .expect(201);
       expect(skill.body).toMatchObject({ name: skillName, level: 'ADVANCED' });
 
+      await request(app.getHttpServer())
+        .post('/projects')
+        .set(headers)
+        .send({
+          name: 'Projeto Inválido',
+          slug: 'Slug com espaços',
+          type: 'PERSONAL',
+        })
+        .expect(400);
+
       const project = await request(app.getHttpServer())
         .post('/projects')
         .set(headers)
@@ -445,6 +455,12 @@ describe('DevProfile API (e2e)', () => {
       expect(created.body.accessToken).toBeUndefined();
       expect(created.body.refreshToken).toBeUndefined();
 
+      await request(app.getHttpServer())
+        .post('/integrations')
+        .set(headers)
+        .send({ provider: 'UNKNOWN', accessToken: 'invalid-provider-secret' })
+        .expect(400);
+
       const persisted = await prisma.integration.findUnique({
         where: { userId_provider: { userId, provider: 'GITHUB' } },
       });
@@ -536,6 +552,12 @@ describe('DevProfile API (e2e)', () => {
         .send({ status: 'RUNNING', startedAt })
         .expect(200);
       expect(running.body).toMatchObject({ status: 'RUNNING', startedAt });
+
+      await request(app.getHttpServer())
+        .patch(`/sync/${created.body.id}`)
+        .set(headers)
+        .send({ status: 'PAUSED' })
+        .expect(400);
 
       const completedAt = '2026-11-17T12:03:00.000Z';
       const failed = await request(app.getHttpServer())

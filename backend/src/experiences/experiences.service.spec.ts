@@ -8,7 +8,9 @@ describe('ExperiencesService', () => {
   it('scopes experience lists to the authenticated user', async () => {
     const experiences = [{ id: 'experience-1' }];
     const findMany = createMockFunction(async (_args: unknown) => experiences);
-    const prisma = { experience: { findMany: findMany.fn } } as unknown as PrismaService;
+    const prisma = {
+      experience: { findMany: findMany.fn },
+    } as unknown as PrismaService;
     const service = new ExperiencesService(prisma);
 
     await expect(service.findAll('user-1')).resolves.toBe(experiences);
@@ -19,7 +21,9 @@ describe('ExperiencesService', () => {
   });
 
   it('trims text and clears end date for a current experience', async () => {
-    const findUnique = createMockFunction(async (_args: unknown) => ({ id: 'profile-1' }));
+    const findUnique = createMockFunction(async (_args: unknown) => ({
+      id: 'profile-1',
+    }));
     const created = { id: 'experience-1' };
     const create = createMockFunction(async (_args: unknown) => created);
     const prisma = {
@@ -52,7 +56,9 @@ describe('ExperiencesService', () => {
   });
 
   it('rejects an end date before the start date', async () => {
-    const profileFind = createMockFunction(async (_args: unknown) => ({ id: 'profile-1' }));
+    const profileFind = createMockFunction(async (_args: unknown) => ({
+      id: 'profile-1',
+    }));
     const create = createMockFunction(async (_args: unknown) => ({}));
     const prisma = {
       profile: { findUnique: profileFind.fn },
@@ -74,7 +80,9 @@ describe('ExperiencesService', () => {
   });
 
   it('rejects a current experience with an end date', async () => {
-    const findUnique = createMockFunction(async (_args: unknown) => ({ id: 'profile-1' }));
+    const findUnique = createMockFunction(async (_args: unknown) => ({
+      id: 'profile-1',
+    }));
     const create = createMockFunction(async (_args: unknown) => ({}));
     const prisma = {
       profile: { findUnique: findUnique.fn },
@@ -93,6 +101,50 @@ describe('ExperiencesService', () => {
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(create.calls).toHaveLength(0);
+  });
+
+  it('requires current=false before assigning an end date to an active experience', async () => {
+    const activeExperience = {
+      id: 'experience-1',
+      startDate: new Date('2024-01-01'),
+      endDate: null,
+      current: true,
+    };
+    const findFirst = createMockFunction(
+      async (_args: unknown) => activeExperience,
+    );
+    const update = createMockFunction(async (_args: unknown) => ({}));
+    const prisma = {
+      experience: { findFirst: findFirst.fn, update: update.fn },
+    } as unknown as PrismaService;
+    const service = new ExperiencesService(prisma);
+
+    await expect(
+      service.update('user-1', 'experience-1', { endDate: '2025-01-01' }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(update.calls).toHaveLength(0);
+  });
+
+  it('rejects an update that moves the end date before the start date', async () => {
+    const completedExperience = {
+      id: 'experience-1',
+      startDate: new Date('2024-01-01'),
+      endDate: new Date('2025-01-01'),
+      current: false,
+    };
+    const findFirst = createMockFunction(
+      async (_args: unknown) => completedExperience,
+    );
+    const update = createMockFunction(async (_args: unknown) => ({}));
+    const prisma = {
+      experience: { findFirst: findFirst.fn, update: update.fn },
+    } as unknown as PrismaService;
+    const service = new ExperiencesService(prisma);
+
+    await expect(
+      service.update('user-1', 'experience-1', { endDate: '2023-12-31' }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(update.calls).toHaveLength(0);
   });
 
   it('reports not found when the owner has no profile', async () => {
