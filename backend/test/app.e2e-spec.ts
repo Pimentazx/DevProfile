@@ -60,7 +60,9 @@ describe('DevProfile API (e2e)', () => {
       await prisma.user.deleteMany({ where: { email: { in: testEmails } } });
     }
     if (testSkillNames.length) {
-      await prisma.skill.deleteMany({ where: { name: { in: testSkillNames } } });
+      await prisma.skill.deleteMany({
+        where: { name: { in: testSkillNames } },
+      });
     }
   });
 
@@ -212,7 +214,9 @@ describe('DevProfile API (e2e)', () => {
         .set(headers)
         .expect(200);
       expect(listed.body).toEqual(
-        expect.arrayContaining([expect.objectContaining({ id: created.body.id })]),
+        expect.arrayContaining([
+          expect.objectContaining({ id: created.body.id }),
+        ]),
       );
 
       await request(app.getHttpServer())
@@ -326,7 +330,9 @@ describe('DevProfile API (e2e)', () => {
         .expect(201);
       expect(project.body.skills).toEqual(
         expect.arrayContaining([
-          expect.objectContaining({ skill: expect.objectContaining({ id: skill.body.id }) }),
+          expect.objectContaining({
+            skill: expect.objectContaining({ id: skill.body.id }),
+          }),
         ]),
       );
 
@@ -411,6 +417,156 @@ describe('DevProfile API (e2e)', () => {
         .delete(`/social-links/${link.body.id}`)
         .set(headers)
         .expect(200);
+    });
+  });
+
+  describe('integrations', () => {
+    it('stores provider tokens privately and supports integration lifecycle', async () => {
+      const { userId, accessToken } = await registerUser();
+      const headers = authenticated(accessToken);
+      const createDto = {
+        provider: 'GITHUB',
+        accessToken: 'github-access-secret',
+        refreshToken: 'github-refresh-secret',
+        expiresAt: '2027-01-01T00:00:00.000Z',
+        metadata: { username: 'test-user' },
+      };
+
+      const created = await request(app.getHttpServer())
+        .post('/integrations')
+        .set(headers)
+        .send(createDto)
+        .expect(201);
+      expect(created.body).toMatchObject({
+        userId,
+        provider: 'GITHUB',
+        metadata: { username: 'test-user' },
+      });
+      expect(created.body.accessToken).toBeUndefined();
+      expect(created.body.refreshToken).toBeUndefined();
+
+      const persisted = await prisma.integration.findUnique({
+        where: { userId_provider: { userId, provider: 'GITHUB' } },
+      });
+      expect(persisted).toMatchObject({
+        accessToken: 'github-access-secret',
+        refreshToken: 'github-refresh-secret',
+      });
+
+      const listed = await request(app.getHttpServer())
+        .get('/integrations')
+        .set(headers)
+        .expect(200);
+      expect(listed.body).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ id: created.body.id }),
+        ]),
+      );
+      expect(listed.body[0].accessToken).toBeUndefined();
+      expect(listed.body[0].refreshToken).toBeUndefined();
+
+      await request(app.getHttpServer())
+        .post('/integrations')
+        .set(headers)
+        .send(createDto)
+        .expect(409);
+
+      const updated = await request(app.getHttpServer())
+        .patch(`/integrations/${created.body.id}`)
+        .set(headers)
+        .send({ accessToken: 'rotated-access-secret' })
+        .expect(200);
+      expect(updated.body.accessToken).toBeUndefined();
+      expect(
+        await prisma.integration.findUnique({
+          where: { userId_provider: { userId, provider: 'GITHUB' } },
+        }),
+      ).toMatchObject({ accessToken: 'rotated-access-secret' });
+
+      await request(app.getHttpServer())
+        .delete(`/integrations/${created.body.id}`)
+        .set(headers)
+        .expect(200);
+      await expect(
+        prisma.integration.findUnique({
+          where: { userId_provider: { userId, provider: 'GITHUB' } },
+        }),
+      ).resolves.toBeNull();
+    });
+
+    it('keeps integration records private to their owner', async () => {
+      const owner = await registerUser('Dono da integração');
+      const otherUser = await registerUser('Outro usuário');
+      const created = await request(app.getHttpServer())
+        .post('/integrations')
+        .set(authenticated(owner.accessToken))
+        .send({ provider: 'LINKEDIN', accessToken: 'linkedin-secret' })
+        .expect(201);
+
+      await request(app.getHttpServer())
+        .get(`/integrations/${created.body.id}`)
+        .set(authenticated(otherUser.accessToken))
+        .expect(404);
+    });
+  });
+
+  describe('sync history', () => {
+    it('records a sync lifecycle and restricts it to the owner', async () => {
+      await request(app.getHttpServer()).get('/sync').expect(401);
+
+      const owner = await registerUser('Dono da sincronização');
+      const otherUser = await registerUser('Outro usuário');
+      const headers = authenticated(owner.accessToken);
+      const created = await request(app.getHttpServer())
+        .post('/sync')
+        .set(headers)
+        .send({ provider: 'GITHUB', resource: 'GITHUB_REPOSITORIES' })
+        .expect(201);
+      expect(created.body).toMatchObject({
+        userId: owner.userId,
+        provider: 'GITHUB',
+        resource: 'GITHUB_REPOSITORIES',
+        status: 'PENDING',
+      });
+
+      const startedAt = '2026-11-17T12:00:00.000Z';
+      const running = await request(app.getHttpServer())
+        .patch(`/sync/${created.body.id}`)
+        .set(headers)
+        .send({ status: 'RUNNING', startedAt })
+        .expect(200);
+      expect(running.body).toMatchObject({ status: 'RUNNING', startedAt });
+
+      const completedAt = '2026-11-17T12:03:00.000Z';
+      const failed = await request(app.getHttpServer())
+        .patch(`/sync/${created.body.id}`)
+        .set(headers)
+        .send({
+          status: 'FAILED',
+          completedAt,
+          errorMessage: 'Provider unavailable',
+        })
+        .expect(200);
+      expect(failed.body).toMatchObject({
+        status: 'FAILED',
+        completedAt,
+        errorMessage: 'Provider unavailable',
+      });
+
+      const listed = await request(app.getHttpServer())
+        .get('/sync')
+        .set(headers)
+        .expect(200);
+      expect(listed.body).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ id: created.body.id, status: 'FAILED' }),
+        ]),
+      );
+
+      await request(app.getHttpServer())
+        .get(`/sync/${created.body.id}`)
+        .set(authenticated(otherUser.accessToken))
+        .expect(404);
     });
   });
 });
